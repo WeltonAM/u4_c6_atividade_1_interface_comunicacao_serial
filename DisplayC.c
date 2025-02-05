@@ -27,18 +27,18 @@ int sm = 0;
 uint32_t led_buffer[NUM_PIXELS] = {0};
 
 // Estruturas para LEDs
-typedef struct {
+typedef struct
+{
     uint pin;
     bool state;
-    const char* color_name;
+    const char *color_name;
     uint8_t r, g, b;
 } Led;
 
 Led leds[] = {
     {LED_PIN_GREEN, false, "Verde", 0, 255, 0},
     {LED_PIN_BLUE, false, "Azul", 0, 0, 255},
-    {LED_PIN_RED, false, "Vermelho", 255, 0, 0}
-};
+    {LED_PIN_RED, false, "Vermelho", 255, 0, 0}};
 
 // Inicialização do Display SSD1306
 void init_display(ssd1306_t *ssd)
@@ -59,7 +59,8 @@ void init_display(ssd1306_t *ssd)
 // Inicializa todos os LEDs RGB
 void init_rgb_leds()
 {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         gpio_init(leds[i].pin);
         gpio_set_dir(leds[i].pin, GPIO_OUT);
     }
@@ -97,17 +98,24 @@ bool debounce(uint pin)
 void update_led_and_display(ssd1306_t *ssd, int led_index)
 {
     Led *led = &leds[led_index];
+    // Alterna o estado do LED
     led->state = !led->state;
     gpio_put(led->pin, led->state);
 
+    // Exibe a mensagem no terminal
     printf("Botão %s pressionado. LED %s %s\n", led->color_name, led->color_name, led->state ? "Ligado" : "Desligado");
 
+    // Atualiza a tela OLED
     char message[32];
-    sprintf(message, "LED %s %s", led->color_name, led->state ? "Ligado" : "Desligado");
-
+    sprintf(message, "LED %s", led->color_name); // Exibe o nome do LED
     ssd1306_fill(ssd, false);
-    ssd1306_draw_string(ssd, message, 10, 10);
-    ssd1306_send_data(ssd);
+    ssd1306_draw_string(ssd, message, 10, 10); // Primeira linha com o nome do LED
+
+    // Exibe o estado do LED (Ligado ou Desligado)
+    sprintf(message, "%s", led->state ? "Ligado" : "Desligado");
+    ssd1306_draw_string(ssd, message, 10, 20); // Segunda linha com o estado do LED
+
+    ssd1306_send_data(ssd); // Atualiza o display
 }
 
 // Função de interrupção para botões
@@ -118,13 +126,17 @@ void button_isr(uint gpio, uint32_t events)
 
     if (!display_initialized)
     {
-        init_display(&ssd);
+        init_display(&ssd); // Inicializa o display SSD1306
         display_initialized = true;
     }
 
-    if (gpio == BTN_A_PIN && debounce(BTN_A_PIN)) {
+    // Verifica qual botão foi pressionado e atualiza o LED correspondente
+    if (gpio == BTN_A_PIN && debounce(BTN_A_PIN))
+    {
         update_led_and_display(&ssd, 0); // LED verde
-    } else if (gpio == BTN_B_PIN && debounce(BTN_B_PIN)) {
+    }
+    else if (gpio == BTN_B_PIN && debounce(BTN_B_PIN))
+    {
         update_led_and_display(&ssd, 1); // LED azul
     }
 }
@@ -157,17 +169,21 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
 // Função para exibir o número na matriz de LEDs WS2812
 void display_number(int num)
 {
-    for (int i = 0; i < NUM_PIXELS; i++) {
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
         led_buffer[i] = urgb_u32(0, 0, 0); // Todos os LEDs apagados
     }
 
-    for (int i = 0; i < NUM_PIXELS; i++) {
-        if (num_map[num][i] == 1) {
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
+        if (num_map[num][i] == 1)
+        {
             led_buffer[i] = urgb_u32(255, 0, 0); // Cor vermelha para LEDs acesos
         }
     }
 
-    for (int i = 0; i < NUM_PIXELS; i++) {
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
         put_pixel(led_buffer[i]);
     }
 }
@@ -200,7 +216,8 @@ int main()
             ssd1306_draw_string(&ssd, &received_char, 10, 10);
             ssd1306_send_data(&ssd);
 
-            if (received_char >= '0' && received_char <= '9') {
+            if (received_char >= '0' && received_char <= '9')
+            {
                 display_number(received_char - '0');
                 printf("Número digitado: %c\n", received_char);
             }
