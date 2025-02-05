@@ -11,7 +11,7 @@
 #define I2C_PORT i2c1
 #define I2C_SDA 14
 #define I2C_SCL 15
-#define endereco 0x3C
+#define ENDERECO 0x3C
 #define NUM_PIXELS 25
 
 #define LED_PIN_GREEN 11
@@ -29,26 +29,22 @@ bool led_green_state = false;
 bool led_blue_state = false;
 bool led_red_state = false;
 
-// Função para inicializar o I2C e o display
+// Função de inicialização para I2C e Display SSD1306
 void init_display(ssd1306_t *ssd) {
     i2c_init(I2C_PORT, 400 * 1000);
-    
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    
     gpio_pull_up(I2C_SDA);
     gpio_pull_up(I2C_SCL);
-    
-    ssd1306_init(ssd, WIDTH, HEIGHT, false, endereco, I2C_PORT);
+
+    ssd1306_init(ssd, WIDTH, HEIGHT, false, ENDERECO, I2C_PORT);
     ssd1306_config(ssd);
-    
     ssd1306_send_data(ssd);
     ssd1306_fill(ssd, false);
-    
     ssd1306_send_data(ssd);
 }
 
-// Função para inicializar LEDs comuns (RGB)
+// Função para configurar pinos dos LEDs RGB
 void init_rgb_leds() {
     gpio_init(LED_PIN_GREEN);
     gpio_init(LED_PIN_BLUE);
@@ -68,22 +64,22 @@ void init_buttons() {
     gpio_pull_up(BTN_B_PIN);
 }
 
-// Função de Debouncing
+// Função de Debouncing para botões
 bool debounce(uint pin) {
     static uint64_t last_interrupt_time_A = 0;
     static uint64_t last_interrupt_time_B = 0;
-    
+
     uint64_t interrupt_time = time_us_32();
     uint64_t *last_time = (pin == BTN_A_PIN) ? &last_interrupt_time_A : &last_interrupt_time_B;
 
-    if (interrupt_time - *last_time > 200000) { 
+    if (interrupt_time - *last_time > 200000) {
         *last_time = interrupt_time;
         return true;
     }
-    
     return false;
 }
 
+// Função de interrupção para botões
 void button_isr(uint gpio, uint32_t events) {
     if (gpio == BTN_A_PIN && debounce(BTN_A_PIN)) {
         led_green_state = !led_green_state;
@@ -96,67 +92,45 @@ void button_isr(uint gpio, uint32_t events) {
     }
 }
 
+// Função para configurar interrupções de botões
 void setup_interrupts() {
     gpio_set_irq_enabled_with_callback(BTN_A_PIN, GPIO_IRQ_EDGE_FALL, true, button_isr);
     gpio_set_irq_enabled_with_callback(BTN_B_PIN, GPIO_IRQ_EDGE_FALL, true, button_isr);
 }
 
-// Função de envio de caracteres pelo Serial Monitor
+// Função para envio de caracteres via UART
 void send_char_via_uart(char c) {
     uart_putc(uart0, c);
 }
 
 // Função para enviar um pixel para o WS2812
-static inline void put_pixel(uint32_t pixel_grb)
-{
+static inline void put_pixel(uint32_t pixel_grb) {
     pio_sm_put_blocking(pio, sm, pixel_grb << 8u);
 }
 
-// Função que converte as cores para o formato GRB
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
-{
+// Função para converter cores para o formato GRB
+static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
     return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
 }
 
-// Função que gera uma cor aleatória
-static inline uint32_t random_color()
-{
-    uint8_t r = rand() % 20;
-    uint8_t g = rand() % 20;
-    uint8_t b = rand() % 20;
-    return urgb_u32(r, g, b);
-}
-
-// Função que define os LEDs da matriz a partir do buffer
-void set_leds_from_buffer()
-{
-    for (int i = 0; i < NUM_PIXELS; i++)
-    {
-        put_pixel(led_buffer[i]);
-    }
-}
-
-// Função que exibe o número na matriz de LEDs e gera cores aleatórias
-void display_number(int num)
-{
-    // Limpar todos os LEDs (para garantir que a matriz será limpa)
-    for (int i = 0; i < NUM_PIXELS; i++)
-    {
+// Função para exibir o número na matriz de LEDs
+void display_number(int num) {
+    // Limpar todos os LEDs
+    for (int i = 0; i < NUM_PIXELS; i++) {
         led_buffer[i] = urgb_u32(0, 0, 0); // Todos os LEDs apagados (off)
     }
 
-    // Preencher os LEDs com base no número a ser exibido e gerar cores aleatórias para os LEDs que representam o número
-    for (int i = 0; i < NUM_PIXELS; i++)
-    {
-        if (num_map[num][i] == 1)
-        {
-            // Atribui uma cor aleatória ao LED que representa o número
-            // led_buffer[i] = random_color();
-            led_buffer[i] = urgb_u32(255, 0, 0);
+    // Preencher os LEDs com base no número a ser exibido
+    for (int i = 0; i < NUM_PIXELS; i++) {
+        if (num_map[num][i] == 1) {
+            led_buffer[i] = urgb_u32(255, 0, 0); // Cor vermelha para LEDs acesos
         }
     }
 
-    set_leds_from_buffer(); // Atualiza os LEDs da matriz
+    // Atualiza os LEDs da matriz
+    for (int i = 0; i < NUM_PIXELS; i++) {
+        put_pixel(led_buffer[i]);
+    }
 }
 
 int main() {
@@ -180,7 +154,7 @@ int main() {
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, false);
 
     char received_char;
-    
+
     while (true) {
         // Verifica se há um caractere no monitor serial
         if (uart_is_readable(uart0)) {
