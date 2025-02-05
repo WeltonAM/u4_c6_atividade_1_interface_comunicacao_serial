@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/irq.h"
@@ -8,6 +9,7 @@
 #include "inc/numbers.h"
 #include "ws2812.pio.h"
 
+// Definições de pinos e constantes
 #define I2C_PORT i2c1
 #define I2C_SDA 14
 #define I2C_SCL 15
@@ -25,11 +27,12 @@ PIO pio = pio0;
 int sm = 0;
 uint32_t led_buffer[NUM_PIXELS] = {0};
 
+// Estado dos LEDs
 bool led_green_state = false;
 bool led_blue_state = false;
 bool led_red_state = false;
 
-// Função de inicialização para I2C e Display SSD1306
+// Inicialização do Display SSD1306
 void init_display(ssd1306_t *ssd)
 {
     i2c_init(I2C_PORT, 400 * 1000);
@@ -45,7 +48,7 @@ void init_display(ssd1306_t *ssd)
     ssd1306_send_data(ssd);
 }
 
-// Função para configurar pinos dos LEDs RGB
+// Configuração dos LEDs RGB
 void init_rgb_leds()
 {
     gpio_init(LED_PIN_GREEN);
@@ -56,7 +59,7 @@ void init_rgb_leds()
     gpio_set_dir(LED_PIN_RED, GPIO_OUT);
 }
 
-// Função para configurar os botões
+// Configuração dos botões
 void init_buttons()
 {
     gpio_init(BTN_A_PIN);
@@ -89,14 +92,12 @@ void button_isr(uint gpio, uint32_t events)
 {
     static char last_message[32] = ""; // Variável para armazenar a última mensagem exibida
 
-    // Inicializa o display SSD1306 uma vez
     static ssd1306_t ssd;
     static bool display_initialized = false;
+
     if (!display_initialized)
     {
-        ssd1306_init(&ssd, WIDTH, HEIGHT, false, ENDERECO, I2C_PORT);
-        ssd1306_config(&ssd);
-        ssd1306_send_data(&ssd);
+        init_display(&ssd);
         display_initialized = true;
     }
 
@@ -115,10 +116,10 @@ void button_isr(uint gpio, uint32_t events)
         // Se a mensagem for diferente da última, atualize o display
         if (strcmp(message, last_message) != 0)
         {
-            ssd1306_fill(&ssd, false);                  // Limpa todo o display (opcional)
-            ssd1306_draw_string(&ssd, message, 10, 10); // Exibe a nova mensagem
-            ssd1306_send_data(&ssd);                    // Envia a atualização para o display
-            strcpy(last_message, message);              // Armazena a mensagem atual
+            ssd1306_fill(&ssd, false);                  
+            ssd1306_draw_string(&ssd, message, 10, 10); 
+            ssd1306_send_data(&ssd);                    
+            strcpy(last_message, message);              
         }
     }
     else if (gpio == BTN_B_PIN && debounce(BTN_B_PIN))
@@ -126,20 +127,17 @@ void button_isr(uint gpio, uint32_t events)
         led_blue_state = !led_blue_state;
         gpio_put(LED_PIN_BLUE, led_blue_state);
 
-        // Mensagem para o terminal
         printf("Botão B pressionado. LED Azul %s\n", led_blue_state ? "Ligado" : "Desligado");
 
-        // Mensagem para o display SSD1306
         char message[32];
         sprintf(message, "LED Azul %s", led_blue_state ? "Ligado" : "Desligado");
 
-        // Se a mensagem for diferente da última, atualize o display
         if (strcmp(message, last_message) != 0)
         {
-            ssd1306_fill(&ssd, false);                  // Limpa todo o display (opcional)
-            ssd1306_draw_string(&ssd, message, 10, 10); // Exibe a nova mensagem
-            ssd1306_send_data(&ssd);                    // Envia a atualização para o display
-            strcpy(last_message, message);              // Armazena a mensagem atual
+            ssd1306_fill(&ssd, false);                  
+            ssd1306_draw_string(&ssd, message, 10, 10); 
+            ssd1306_send_data(&ssd);                    
+            strcpy(last_message, message);              
         }
     }
 }
@@ -151,7 +149,7 @@ void setup_interrupts()
     gpio_set_irq_enabled_with_callback(BTN_B_PIN, GPIO_IRQ_EDGE_FALL, true, button_isr);
 }
 
-// Função para envio de caracteres via UART
+// Função para enviar caracteres via UART
 void send_char_via_uart(char c)
 {
     uart_putc(uart0, c);
@@ -169,13 +167,13 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
     return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
 }
 
-// Função para exibir o número na matriz de LEDs
+// Função para exibir o número na matriz de LEDs WS2812
 void display_number(int num)
 {
     // Limpar todos os LEDs
     for (int i = 0; i < NUM_PIXELS; i++)
     {
-        led_buffer[i] = urgb_u32(0, 0, 0); // Todos os LEDs apagados (off)
+        led_buffer[i] = urgb_u32(0, 0, 0); // Todos os LEDs apagados
     }
 
     // Preencher os LEDs com base no número a ser exibido
@@ -198,17 +196,15 @@ int main()
 {
     stdio_init_all(); // Inicializa o stdio para UART
 
+    // Inicializa botões, LEDs e display
+    init_buttons();
+    init_rgb_leds();
+
     // Inicializa o display SSD1306
     ssd1306_t ssd;
     init_display(&ssd);
 
-    // Inicializa botões
-    init_buttons();
-
-    // Inicializa LEDs RGB
-    init_rgb_leds();
-
-    // Configura interrupções
+    // Configura interrupções de botões
     setup_interrupts();
 
     // Inicializa o WS2812
