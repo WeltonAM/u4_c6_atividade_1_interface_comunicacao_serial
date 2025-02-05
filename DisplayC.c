@@ -5,11 +5,14 @@
 #include "hardware/irq.h"
 #include "inc/ssd1306.h"
 #include "inc/font.h"
+#include "inc/numbers.h"
+#include "ws2812.pio.h"
 
 #define I2C_PORT i2c1
 #define I2C_SDA 14
 #define I2C_SCL 15
 #define endereco 0x3C
+#define NUM_PIXELS 25
 
 #define LED_PIN_GREEN 11
 #define LED_PIN_BLUE 12
@@ -17,6 +20,10 @@
 #define BTN_A_PIN 5
 #define BTN_B_PIN 6
 #define WS2812_PIN 7
+
+PIO pio = pio0;
+int sm = 0;
+uint32_t led_buffer[NUM_PIXELS] = {0};
 
 bool led_green_state = false;
 bool led_blue_state = false;
@@ -99,6 +106,59 @@ void send_char_via_uart(char c) {
     uart_putc(uart0, c);
 }
 
+// Função para enviar um pixel para o WS2812
+static inline void put_pixel(uint32_t pixel_grb)
+{
+    pio_sm_put_blocking(pio, sm, pixel_grb << 8u);
+}
+
+// Função que converte as cores para o formato GRB
+static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
+{
+    return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
+}
+
+// Função que gera uma cor aleatória
+static inline uint32_t random_color()
+{
+    uint8_t r = rand() % 20;
+    uint8_t g = rand() % 20;
+    uint8_t b = rand() % 20;
+    return urgb_u32(r, g, b);
+}
+
+// Função que define os LEDs da matriz a partir do buffer
+void set_leds_from_buffer()
+{
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
+        put_pixel(led_buffer[i]);
+    }
+}
+
+// Função que exibe o número na matriz de LEDs e gera cores aleatórias
+void display_number(int num)
+{
+    // Limpar todos os LEDs (para garantir que a matriz será limpa)
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
+        led_buffer[i] = urgb_u32(0, 0, 0); // Todos os LEDs apagados (off)
+    }
+
+    // Preencher os LEDs com base no número a ser exibido e gerar cores aleatórias para os LEDs que representam o número
+    for (int i = 0; i < NUM_PIXELS; i++)
+    {
+        if (num_map[num][i] == 1)
+        {
+            // Atribui uma cor aleatória ao LED que representa o número
+            // led_buffer[i] = random_color();
+            led_buffer[i] = urgb_u32(255, 0, 0);
+        }
+    }
+
+    set_leds_from_buffer(); // Atualiza os LEDs da matriz
+}
+
 int main() {
     stdio_init_all(); // Inicializa o stdio para UART
 
@@ -115,6 +175,10 @@ int main() {
     // Configura interrupções
     setup_interrupts();
 
+    // Inicializa o WS2812
+    uint offset = pio_add_program(pio, &ws2812_program);
+    ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, false);
+
     char received_char;
     
     while (true) {
@@ -130,9 +194,7 @@ int main() {
 
             // Se o caractere for um número, exibe na matriz WS2812
             if (received_char >= '0' && received_char <= '9') {
-                // Aqui você pode usar uma função para iluminar o LED correspondente
-                // na matriz WS2812 (LEDs endereçáveis).
-                // Exemplo: acender um LED da matriz 5x5 WS2812.
+                display_number(received_char - '0');
                 printf("Número digitado: %c\n", received_char);
             }
         }
