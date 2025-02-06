@@ -98,6 +98,7 @@ bool debounce(uint pin)
 void update_led_and_display(ssd1306_t *ssd, int led_index)
 {
     Led *led = &leds[led_index];
+
     // Alterna o estado do LED
     led->state = !led->state;
     gpio_put(led->pin, led->state);
@@ -203,23 +204,23 @@ int main()
     uint offset = pio_add_program(pio, &ws2812_program);
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, false);
 
-    char received_char;
+    printf("\n--- Bem vindo! ---\n Digite um valor para exibir no display\n");
 
     while (true)
     {
-        if (uart_is_readable(uart0))
+        if (stdio_usb_connected())
         {
-            received_char = uart_getc(uart0);
-            send_char_via_uart(received_char);
-
-            ssd1306_fill(&ssd, false);
-            ssd1306_draw_string(&ssd, &received_char, 10, 10);
-            ssd1306_send_data(&ssd);
-
-            if (received_char >= '0' && received_char <= '9')
+            char c;
+            if (scanf("%c", &c) == 1)
             {
-                display_number(received_char - '0');
-                printf("Número digitado: %c\n", received_char);
+                printf("Valor recebido: '%c'\n", c);
+                ssd1306_draw_char(&ssd, c, 20, 20); 
+                ssd1306_send_data(&ssd);           
+
+                if (c >= '0' && c <= '9')
+                {
+                    display_number(c - '0');
+                }
             }
         }
 
