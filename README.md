@@ -110,7 +110,7 @@ cd u4_c6_atividade_1_interface_comunicacao_serial
 
 ## 🎥 Demonstração
 
-[![Assistir Vídeo](https://img.shields.io/badge/Assistir%20Vídeo-Demonstrativo-blue?style=for-the-badge&logo=youtube)](https://link-para-video.com)
+[![Assistir Vídeo](https://img.shields.io/badge/Assistir%20Vídeo-Demonstrativo-blue?style=for-the-badge&logo=youtube)](https://drive.google.com/file/d/1y22qQr478hn4p2j-CESjJ-Ike40zO8zz/view?usp=sharing)
 
 ## 📌 Conclusão
 
