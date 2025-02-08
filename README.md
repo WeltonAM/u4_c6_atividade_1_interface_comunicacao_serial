@@ -64,8 +64,6 @@ Para o desenvolvimento, devem ser seguidos os seguintes requisitos:
    - Demonstrar **compreensão do protocolo I2C**.
 5. **Envio de informação via UART**:
    - Validar a comunicação serial via **UART**.
-6. **Organização do código**:
-   - O código deve ser **estruturado e comentado** para facilitar a compreensão.
 
 ---
 
