@@ -167,6 +167,15 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
     return ((uint32_t)(r) << 8) | ((uint32_t)(g) << 16) | (uint32_t)(b);
 }
 
+// Função que gera uma cor aleatória
+static inline uint32_t random_color()
+{
+    uint8_t r = rand() % 20;
+    uint8_t g = rand() % 20;
+    uint8_t b = rand() % 20;
+    return urgb_u32(r, g, b);
+}
+
 // Função para exibir o número na matriz de LEDs WS2812
 void display_number(int num)
 {
@@ -179,7 +188,8 @@ void display_number(int num)
     {
         if (num_map[num][i] == 1)
         {
-            led_buffer[i] = urgb_u32(255, 0, 0); // Cor vermelha para LEDs acesos
+            led_buffer[i] = random_color(); // Cores aleatórias para testes na placa BitDogLab
+            // led_buffer[i] = urgb_u32(255, 0, 0); // Leds mais fortes para teste no simulador Wokwi
         }
     }
 
@@ -214,8 +224,8 @@ int main()
             if (scanf("%c", &c) == 1)
             {
                 printf("Valor recebido: '%c'\n", c);
-                ssd1306_draw_char(&ssd, c, 20, 20); 
-                ssd1306_send_data(&ssd);           
+                ssd1306_draw_char(&ssd, c, 20, 20);
+                ssd1306_send_data(&ssd);
 
                 if (c >= '0' && c <= '9')
                 {
